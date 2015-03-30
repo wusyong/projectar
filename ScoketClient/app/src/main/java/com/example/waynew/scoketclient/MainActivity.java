@@ -8,6 +8,9 @@ import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.net.UnknownHostException;
 
+import android.content.Context;
+import android.net.wifi.WifiInfo;
+import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.app.Activity;
@@ -97,12 +100,23 @@ public class MainActivity extends Activity {
 
                         try // send object to server
                         {
-                            output.writeObject( "CLIENT>>> " + dstText );
-                            output.flush(); // flush data to output
+                            if(message.equals("SERVER>>> Connection successful")) {
+
+                                WifiManager manager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
+                                WifiInfo info = manager.getConnectionInfo();
+                                String address = info.getMacAddress();
+
+                                output.writeObject( "CLIENT>>> " + address );
+                                output.flush(); // flush data to output
+                            }
+                            else {
+                                output.writeObject( "CLIENT>>> " + dstText );
+                                output.flush(); // flush data to output
+                            }
                         } // end try
                         catch ( IOException ioException )
                         {
-                            //response += "Error writing object\n" ;
+                            response += "Error writing object\n" ;
                         } // end catch
 
                     } // end try
