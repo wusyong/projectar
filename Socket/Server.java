@@ -1,10 +1,4 @@
 // Server portion of a client/server stream-socket connection. 
-import java.io.EOFException;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.net.ServerSocket;
-import java.net.Socket;
 import java.awt.BorderLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -13,7 +7,17 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
-import java.util.Scanner;
+
+import java.io.*;
+import java.net.*;
+import java.util.*;
+import java.lang.*;
+
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.client.*;
+import org.apache.hadoop.hbase.util.*;
+import org.apache.hadoop.conf.Configuration;
+
 
 public class Server 
 {
@@ -22,6 +26,14 @@ public class Server
    private ServerSocket server; // server socket
    private Socket connection; // connection to client
    private int counter = 1; // counter of number of connections
+   private String angle;
+
+   public static Configuration conf;
+    static {
+        conf = HBaseConfiguration.create();
+        conf.set("hbase.zookeeper.property.clientPort", "2222");
+        conf.set("hbase.zookeeper.quorum", "hbasemaster");
+    }
 
    // set up and run server 
    public void runServer()
@@ -89,11 +101,33 @@ public class Server
       { 
          try // read message and display it
          {
-            message = ( String ) input.readObject(); // read new message
-            System.out.println( message ); // display message
+            angle = ( String ) input.readObject(); // read new message
+            System.out.println( angle ); // display message
             //Scanner scanner = new Scanner(System.in);
             //String str = scanner.nextLine();
+
+            HTable table = new HTable(conf, "UserTableTmp");
+            HTable gazer = new HTable(conf, "gazer_table_tmp");
+            
+
+            
+            //PUT
+            Put p = new Put(Bytes.toBytes("MAC1")); 
+            p.add(Bytes.toBytes("angle"), Bytes.toBytes(""),
+                  Bytes.toBytes("420"));
+            table.put(p); 
+        
+            //GET
+            Get g = new Get(Bytes.toBytes("sec1")); 
+            Result r = gazer.get(g); 
+            byte[] value = r.getValue(Bytes.toBytes("text"),
+                                       Bytes.toBytes(""));
+            String valueStr = Bytes.toString(value); 
+            System.out.println("GET: " + valueStr);
+
+            sendData(valueStr);
             sendData("TERMINATE");
+            break;
             
          } // end try
          catch ( ClassNotFoundException classNotFoundException ) 
@@ -127,7 +161,7 @@ public class Server
    {
       try // send object to client
       {
-         output.writeObject( "SERVER>>> " + message );
+         output.writeObject( message );
          output.flush(); // flush output to client
          System.out.println( "SERVER>>> " + message );
       } // end try
